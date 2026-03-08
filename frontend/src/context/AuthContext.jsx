@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from "react";
-import { loginUser, registerUser } from "../services/api";
+import { getProfile } from "../services/api";
 
 export const AuthContext = createContext();
 
@@ -10,75 +10,71 @@ export const AuthProvider = ({ children }) => {
 
   // 🔁 Restore session on refresh
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const fetchProfile = async () => {
+      const storedToken = localStorage.getItem("token");
+      const storedUser  = localStorage.getItem("user");
 
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-    }
+      if (storedToken) {
+        // Immediately restore from localStorage for fast render
+        if (storedUser) {
+          try { setUser(JSON.parse(storedUser)); } catch (_) {}
+        }
+        // Then verify with backend
+        try {
+          const { data } = await getProfile();
+          const profile = data.user || data;
+          if (profile) {
+            setUser(profile);
+            localStorage.setItem("user", JSON.stringify(profile));
+          }
+        } catch (err) {
+          // Token invalid → clear session
+          console.warn("[Auth] Session expired, clearing.", err?.response?.status);
+          if (err?.response?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            setToken(null);
+            setUser(null);
+          }
+        }
+      }
+      setLoading(false);
+    };
 
-    setLoading(false);
+    fetchProfile();
   }, [token]);
 
-  // ✅ LOGIN
-  const login = async (credentials) => {
-    try {
-      const data = await loginUser(credentials);
-
-      if (!data.token) {
-        throw new Error(data.message || "Login failed");
+  /**
+   * Called by Login / Register pages AFTER the socket has already
+   * verified credentials and stored token + user in localStorage.
+   * This simply syncs React state so the app immediately re-renders.
+   */
+  const login = () => {
+    const storedToken = localStorage.getItem("token");
+    const storedUser  = localStorage.getItem("user");
+    if (storedToken) {
+      setToken(storedToken);
+      if (storedUser) {
+        try { setUser(JSON.parse(storedUser)); } catch (_) {}
       }
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      setToken(data.token);
-      setUser(data.user);
-
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: error.message };
     }
-  };
-
-  // ✅ REGISTER
-  const register = async (formData) => {
-    try {
-      const data = await registerUser(formData);
-
-      if (!data.token) {
-        throw new Error(data.message || "Registration failed");
-      }
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      setToken(data.token);
-      setUser(data.user);
-
-      return { success: true };
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
+    return { success: true };
   };
 
   // 🚪 LOGOUT
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
     setUser(null);
     setToken(null);
-
-    window.location.href = "/login";
   };
 
   const value = {
     user,
     token,
     loading,
-    isAuthenticated: !!token,
+    isAuthenticated: !!token && !!user,
     login,
-    register,
     logout,
   };
 

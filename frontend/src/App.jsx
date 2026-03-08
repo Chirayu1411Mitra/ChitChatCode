@@ -1,35 +1,25 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/Loginform";
-import RegisterPage from "./pages/Registerform";
-// import Dashboard from "./pages/Dashboard";
-import { useAuth } from "./hooks/useAuth";
+import React, { useContext } from 'react';
+import { AuthContext } from './context/AuthContext';
+import DashBoard from './pages/DashBoard';
+import Loginform from './pages/Loginform';
+import './global.css';
 
 function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return (
+      <div className="auth-splash">
+        <div className="auth-spinner" />
+        <p className="auth-splash-text">ChitChatCode</p>
+      </div>
+    );
+  }
 
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/register"
-          element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />}
-        />
-
-        {/* Protected Route */}
-        <Route
-          path="/dashboard"
-          element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />}
-        />
-
-        {/* Default */}
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
-    </Router>
+    <div className="h-screen w-screen overflow-hidden">
+      {isAuthenticated ? <DashBoard /> : <Loginform />}
+    </div>
   );
 }
 

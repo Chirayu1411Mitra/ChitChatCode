@@ -1,125 +1,142 @@
-import { useState } from "react";
-import { registerUser } from "../services/api";
+import { useState, useContext, useEffect, useRef } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { io } from 'socket.io-client';
 
-function Registerform() {
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: ""
-  });
+const SOCKET_URL = `http://${import.meta.env.VITE_BACKEND_HOST || 'localhost'}:${import.meta.env.VITE_BACKEND_PORT || 5000}`;
 
+function Registerform({ prefillEmail = '', onBack }) {
+  const { login } = useContext(AuthContext);
+  const [form, setForm] = useState({ username: '', email: prefillEmail, password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    socketRef.current = io(SOCKET_URL, { transports: ['websocket'] });
+    return () => socketRef.current?.disconnect();
+  }, []);
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+    setError('');
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.username || !form.email || !form.password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+
+    const socket = socketRef.current;
+
+    socket.emit('auth:register', {
+      username: form.username,
+      email: form.email,
+      password: form.password,
+    });
+
+    socket.once('auth:register:result', async (result) => {
+      setLoading(false);
+      if (result.success) {
+        localStorage.setItem('token', result.token);
+        localStorage.setItem('user', JSON.stringify(result.user));
+        await login({ email: form.email, password: form.password });
+      } else {
+        setError(result.message || 'Registration failed.');
+      }
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await registerUser(form);
-      console.log("Register Success:", res.data);
-
-      window.location.href = "/login";
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.card}>
-        <h2>Register</h2>
+    <div className="auth-page">
+      <div className="auth-blob auth-blob-1" />
+      <div className="auth-blob auth-blob-2" />
+      <div className="auth-blob auth-blob-3" />
 
-        {error && <p style={styles.error}>{error}</p>}
+      <div className="auth-card">
+        <div className="auth-logo">
+          <span className="auth-logo-icon">✨</span>
+        </div>
+        <h1 className="auth-title">Create account</h1>
+        <p className="auth-subtitle">Join ChitChatCode and start chatting today</p>
 
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          value={form.username}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-field">
+            <label className="auth-label">Username</label>
+            <input
+              id="reg-username"
+              type="text"
+              name="username"
+              placeholder="cooldev123"
+              value={form.username}
+              onChange={handleChange}
+              className="auth-input"
+              autoComplete="username"
+            />
+          </div>
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+          <div className="auth-field">
+            <label className="auth-label">Email address</label>
+            <input
+              id="reg-email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={handleChange}
+              className="auth-input"
+              autoComplete="email"
+            />
+          </div>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+          <div className="auth-field">
+            <label className="auth-label">Password</label>
+            <input
+              id="reg-password"
+              type="password"
+              name="password"
+              placeholder="Min. 6 characters"
+              value={form.password}
+              onChange={handleChange}
+              className="auth-input"
+              autoComplete="new-password"
+            />
+          </div>
 
-        <button type="submit" disabled={loading} style={styles.button}>
-          {loading ? "Creating Account..." : "Register"}
-        </button>
+          {error && (
+            <div className="auth-error">
+              <span className="auth-error-icon">⚠️</span> {error}
+            </div>
+          )}
 
-        <p>
-          Already have an account?{" "}
-          <a href="/login">Login</a>
-        </p>
-      </form>
+          <button
+            id="reg-submit"
+            type="submit"
+            className={`auth-btn auth-btn--register${loading ? ' auth-btn--loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? <span className="auth-btn-spinner" /> : 'Create Account'}
+          </button>
+        </form>
+
+        {onBack && (
+          <p className="auth-switch">
+            Already have an account?{' '}
+            <button id="go-to-login" className="auth-link" onClick={onBack}>
+              Sign in
+            </button>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
-
-
-const styles = {
-  container: {
-    height: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "#111"
-  },
-  card: {
-    background: "#1e1e1e",
-    padding: "30px",
-    borderRadius: "8px",
-    width: "350px",
-    color: "#fff"
-  },
-  input: {
-    width: "100%",
-    padding: "10px",
-    margin: "10px 0",
-    borderRadius: "5px",
-    border: "none"
-  },
-  button: {
-    width: "100%",
-    padding: "10px",
-    background: "#2196F3",
-    color: "#fff",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer"
-  },
-  error: {
-    color: "red"
-  }
-};
 
 export default Registerform;
