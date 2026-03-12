@@ -1,158 +1,141 @@
-import { useState, useContext, useEffect, useRef } from 'react';
+import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { registerUser } from "../services/api";
-// import { io } from 'socket.io-client';
-
-const SOCKET_URL = `http://${import.meta.env.VITE_BACKEND_HOST || 'localhost'}:${import.meta.env.VITE_BACKEND_PORT || 5000}`;
 
 function Registerform({ prefillEmail = '', onBack }) {
   const { login } = useContext(AuthContext);
-  const [form, setForm] = useState({ username: '', email: prefillEmail, password: '' });
+  const [form, setForm] = useState({ username: '', email: prefillEmail, password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // const socketRef = useRef(null);
-
-  // useEffect(() => {
-  //   socketRef.current = io(SOCKET_URL, { transports: ['websocket'] });
-  //   return () => socketRef.current?.disconnect();
-  // }, []);
 
   const handleChange = (e) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
     setError('');
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.username || !form.email || !form.password) {
-      setError('Please fill in all fields.');
-      return;
+    if (form.password !== form.confirmPassword) {
+      return setError("Passwords do not match.");
     }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
+
+    setLoading(true);
     try {
-      setLoading(true);
-      setError("");
       const res = await registerUser({
         username: form.username,
         email: form.email,
         password: form.password
       });
-
       const { token, user } = res.data;
-
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-
-      await login({ email: form.email, password: form.password });
-
+      // await login({ email: form.email, password: form.password });
+      await onBack();
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    // const socket = socketRef.current;
-
-    // socket.emit('auth:register', {
-    //   username: form.username,
-    //   email: form.email,
-    //   password: form.password,
-    // });
-
-    // socket.once('auth:register:result', async (result) => {
-    //   setLoading(false);
-    //   if (result.success) {
-    //     localStorage.setItem('token', result.token);
-    //     localStorage.setItem('user', JSON.stringify(result.user));
-    //     await login({ email: form.email, password: form.password });
-    //   } else {
-    //     setError(result.message || 'Registration failed.');
-    //   }
-    // });
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-blob auth-blob-1" />
-      <div className="auth-blob auth-blob-2" />
-      <div className="auth-blob auth-blob-3" />
-
-      <div className="auth-card">
-        <div className="auth-logo">
-          <span className="auth-logo-icon">✨</span>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F4F8] p-4 font-sans text-slate-800">
+      <div className="bg-white w-full max-w-[520px] p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white">
+        
+        {/* Icon Container */}
+        <div className="flex justify-center mb-8">
+          <div className="w-16 h-16 bg-indigo-100 rounded-[1.5rem] flex items-center justify-center -rotate-3 transition-transform hover:rotate-0">
+            <span className="text-3xl rotate-3">✨</span>
+          </div>
         </div>
-        <h1 className="auth-title">Create account</h1>
-        <p className="auth-subtitle">Join ChitChatCode and start chatting today</p>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="auth-field">
-            <label className="auth-label">Username</label>
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Create Account</h2>
+          <p className="text-slate-400 text-sm mt-2 font-medium text-center">Join ChitChatCode and start talking today.</p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-2xl border border-red-100 text-center animate-in fade-in zoom-in duration-300">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label className="block text-sm font-bold text-slate-700 ml-1">Username</label>
             <input
-              id="reg-username"
               type="text"
               name="username"
-              placeholder="cooldev123"
+              placeholder="panda_dev"
               value={form.username}
               onChange={handleChange}
-              className="auth-input"
-              autoComplete="username"
+              required
+              className="w-full px-5 py-4 rounded-2xl bg-[#F8FAFC] border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none placeholder:text-slate-300 shadow-sm"
             />
           </div>
 
-          <div className="auth-field">
-            <label className="auth-label">Email address</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-bold text-slate-700 ml-1">Email</label>
             <input
-              id="reg-email"
               type="email"
               name="email"
-              placeholder="you@example.com"
+              placeholder="panda@example.com"
               value={form.email}
               onChange={handleChange}
-              className="auth-input"
-              autoComplete="email"
+              required
+              className="w-full px-5 py-4 rounded-2xl bg-[#F8FAFC] border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none placeholder:text-slate-300 shadow-sm"
             />
           </div>
 
-          <div className="auth-field">
-            <label className="auth-label">Password</label>
-            <input
-              id="reg-password"
-              type="password"
-              name="password"
-              placeholder="Min. 6 characters"
-              value={form.password}
-              onChange={handleChange}
-              className="auth-input"
-              autoComplete="new-password"
-            />
-          </div>
-
-          {error && (
-            <div className="auth-error">
-              <span className="auth-error-icon">⚠️</span> {error}
+          {/* Side-by-Side Password Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-700 ml-1 text-center sm:text-left">Password</label>
+              <input
+                type="password"
+                name="password"
+                placeholder="••••••••"
+                value={form.password}
+                onChange={handleChange}
+                required
+                className="w-full px-5 py-4 rounded-2xl bg-[#F8FAFC] border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none placeholder:text-slate-300 shadow-sm"
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-700 ml-1 text-center sm:text-left">Confirm</label>
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="••••••••"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                required
+                className="w-full px-5 py-4 rounded-2xl bg-[#F8FAFC] border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none placeholder:text-slate-300 shadow-sm"
+              />
+            </div>
+          </div>
 
-          <button
-            id="reg-submit"
-            type="submit"
-            className={`auth-btn auth-btn--register${loading ? ' auth-btn--loading' : ''}`}
+          <button 
+            type="submit" 
             disabled={loading}
+            className={`w-full py-4 px-6 font-bold rounded-2xl transition-all mt-6 flex items-center justify-center gap-2 shadow-lg ${
+              loading 
+                ? 'bg-indigo-300 text-white cursor-not-allowed' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25 active:scale-[0.98]'}`}
           >
-            {loading ? <span className="auth-btn-spinner" /> : 'Create Account'}
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : "Register"}
           </button>
         </form>
 
-        {onBack && (
-          <p className="auth-switch">
-            Already have an account?{' '}
-            <button id="go-to-login" className="auth-link" onClick={onBack}>
-              Sign in
-            </button>
-          </p>
-        )}
+        <div className="mt-10 text-center text-sm text-slate-500 font-medium">
+          Already have an account?{" "}
+          <button onClick={onBack} className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors underline-offset-4 hover:underline">
+            Login
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,10 +1,7 @@
-import { useState, useContext, useEffect, useRef } from 'react';
+import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Registerform from './Registerform';
 import { loginUser } from "../services/api";
-// import { io } from 'socket.io-client';
-
-const SOCKET_URL = `http://${import.meta.env.VITE_BACKEND_HOST || 'localhost'}:${import.meta.env.VITE_BACKEND_PORT || 5000}`;
 
 function Loginform() {
   const { login } = useContext(AuthContext);
@@ -13,12 +10,6 @@ function Loginform() {
   const [error, setError] = useState('');
   const [showRegister, setShowRegister] = useState(false);
   const [prefillEmail, setPrefillEmail] = useState('');
-  // const socketRef = useRef(null);
-
-  // useEffect(() => {
-  //   socketRef.current = io(SOCKET_URL, { transports: ['websocket'] });
-  //   return () => socketRef.current?.disconnect();
-  // }, []);
 
   const handleChange = (e) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -27,139 +18,103 @@ function Loginform() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) {
-      setError('Please fill in all fields.');
-      return;
-    }
-
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-
-      const res = await loginUser({
-        email: form.email,
-        password: form.password
-      });
-
+      const res = await loginUser(form);
       const { token, user } = res.data;
-
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-
       await login(user);
     } catch (err) {
-      if (err.response?.status === 401) {
-        setError("Invalid email or password.");
-      } else if (err.response?.status === 404) {
-        // user not found → show register page
+      if (err.response?.status === 404) {
         setPrefillEmail(form.email);
         setShowRegister(true);
       } else {
-        setError(err.response?.data?.message || "Login failed.");
+        setError("Invalid email or password.");
       }
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-
-    // const socket = socketRef.current;
-
-    // socket.emit('auth:login', { email: form.email, password: form.password });
-
-    // socket.once('auth:login:result', async (result) => {
-    //   setLoading(false);
-    //   if (result.success) {
-    //     // Persist token + user via AuthContext
-    //     localStorage.setItem('token', result.token);
-    //     localStorage.setItem('user', JSON.stringify(result.user));
-    //     await login({ email: form.email, password: form.password });
-    //   } else if (result.notFound) {
-    //     // Not in DB → go to register with pre-filled email
-    //     setPrefillEmail(form.email);
-    //     setShowRegister(true);
-    //   } else {
-    //     setError(result.message || 'Login failed.');
-    //   }
-    // });
   };
 
-  if (showRegister) {
-    return <Registerform prefillEmail={prefillEmail} onBack={() => setShowRegister(false)} />;
-  }
+  if (showRegister) return <Registerform prefillEmail={prefillEmail} onBack={() => setShowRegister(false)} />;
 
   return (
-    <div className="auth-page">
-      {/* Animated background blobs */}
-      <div className="auth-blob auth-blob-1" />
-      <div className="auth-blob auth-blob-2" />
-      <div className="auth-blob auth-blob-3" />
-
-      <div className="auth-card">
-        {/* Logo / Brand */}
-        <div className="auth-logo">
-          <span className="auth-logo-icon">💬</span>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#F0F4F8] p-4 font-sans text-slate-800">
+      <div className="bg-white w-full max-w-[480px] p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white">
+        
+        {/* Animated Icon Container */}
+        <div className="flex justify-center mb-8">
+          <div className="w-16 h-16 bg-blue-100 rounded-[1.5rem] flex items-center justify-center rotate-3 transition-transform hover:rotate-0">
+            <span className="text-3xl -rotate-3">💬</span>
+          </div>
         </div>
-        <h1 className="auth-title">Welcome back</h1>
-        <p className="auth-subtitle">Sign in to continue to ChitChatCode</p>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="auth-field">
-            <label className="auth-label">Email address</label>
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Welcome back</h2>
+          <p className="text-slate-400 text-sm mt-2 font-medium">Enter your details to access your chats.</p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-600 text-sm rounded-2xl border border-red-100 text-center animate-in fade-in zoom-in duration-300">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-bold text-slate-700 ml-1">Email</label>
             <input
-              id="login-email"
               type="email"
               name="email"
-              placeholder="you@example.com"
+              placeholder="panda@example.com"
               value={form.email}
               onChange={handleChange}
-              className="auth-input"
-              autoComplete="email"
+              required
+              className="w-full px-5 py-4 rounded-2xl bg-[#F8FAFC] border-2 border-transparent focus:border-blue-500 focus:bg-white transition-all outline-none placeholder:text-slate-300 shadow-sm"
             />
           </div>
 
-          <div className="auth-field">
-            <label className="auth-label">Password</label>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center ml-1">
+              <label className="block text-sm font-bold text-slate-700">Password</label>
+              <button type="button" className="text-xs font-bold text-blue-500 hover:text-blue-600">Forgot?</button>
+            </div>
             <input
-              id="login-password"
               type="password"
               name="password"
               placeholder="••••••••"
               value={form.password}
               onChange={handleChange}
-              className="auth-input"
-              autoComplete="current-password"
+              required
+              className="w-full px-5 py-4 rounded-2xl bg-[#F8FAFC] border-2 border-transparent focus:border-blue-500 focus:bg-white transition-all outline-none placeholder:text-slate-300 shadow-sm"
             />
           </div>
 
-          {error && (
-            <div className="auth-error">
-              <span className="auth-error-icon">⚠️</span> {error}
-            </div>
-          )}
-
-          <button
-            id="login-submit"
-            type="submit"
-            className={`auth-btn${loading ? ' auth-btn--loading' : ''}`}
+          <button 
+            type="submit" 
             disabled={loading}
+            className={`w-full py-4 px-6 font-bold rounded-2xl transition-all mt-4 flex items-center justify-center gap-2 shadow-lg ${
+              loading 
+                ? 'bg-blue-300 text-white cursor-not-allowed' 
+                : 'bg-[#4285F4] hover:bg-[#3b77db] text-white shadow-blue-500/25 active:scale-[0.98]'}`}
           >
             {loading ? (
-              <span className="auth-btn-spinner" />
-            ) : (
-              'Sign In'
-            )}
+               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : "Login Now"}
           </button>
         </form>
 
-        <p className="auth-switch">
-          Don't have an account?{' '}
-          <button
-            id="go-to-register"
-            className="auth-link"
-            onClick={() => setShowRegister(true)}
-          >
-            Create one
+        {/* Footer Link */}
+        <div className="mt-10 text-center text-sm text-slate-500 font-medium">
+          Don’t have an account?{" "}
+          <button onClick={() => setShowRegister(true)} className="text-blue-500 font-bold hover:text-blue-600 transition-colors underline-offset-4 hover:underline">
+            Register
           </button>
-        </p>
+        </div>
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ function App() {
           path="/"
           element={
             isAuthenticated
-              ? <Navigate to="/dashboard" />
+              ? <Navigate to="/dashboard" replace />
               : <Loginform />
           }
         />
@@ -39,7 +39,7 @@ function App() {
           path="/register"
           element={
             isAuthenticated
-              ? <Navigate to="/dashboard" />
+              ? <Navigate to="/dashboard" replace />
               : <Registerform />
           }
         />
@@ -50,9 +50,12 @@ function App() {
           element={
             isAuthenticated
               ? <DashBoard />
-              : <Navigate to="/" />
+              : <Navigate to="/" replace />
           }
         />
+
+        {/* Fallback Route */}
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} replace />} />
 
       </Routes>
 

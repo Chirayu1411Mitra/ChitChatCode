@@ -1,7 +1,6 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const {generateToken} = require("../services/autheService")
-import { disconnectSocket } from "../services/socketService";
 
 // @desc    Register a new user
 // @route   POST /api/auth/register

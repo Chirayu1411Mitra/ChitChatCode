@@ -44,11 +44,6 @@ export const AuthProvider = ({ children }) => {
     fetchProfile();
   }, [token]);
 
-  /**
-   * Called by Login / Register pages AFTER the socket has already
-   * verified credentials and stored token + user in localStorage.
-   * This simply syncs React state so the app immediately re-renders.
-   */
   const login = () => {
     const storedToken = localStorage.getItem("token");
     const storedUser  = localStorage.getItem("user");
