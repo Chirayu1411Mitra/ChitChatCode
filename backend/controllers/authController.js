@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const {generateToken} = require("../services/autheService")
+import { disconnectSocket } from "../services/socketService";
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
@@ -110,8 +111,13 @@ const getMe = async (req, res) => {
     }
 };
 
+const logout = (req, res) => {
+    res.status(200).json({ message: "Logged out successfully" });
+};
+
 module.exports = {
     registerUser,
     loginUser,
     getMe,
+    logout,
 };
