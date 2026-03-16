@@ -11,22 +11,20 @@ import {
   ListItemIcon,
   ListItemText,
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
 import { PushPin, Archive, ArrowCounterClockwise } from "@phosphor-icons/react";
 
-const StyledBadge = styled(Badge)(({ theme }) => ({
-  "& .MuiBadge-badge": {
-    backgroundColor: "#44b700",
-    color: "#44b700",
-    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
-  },
-}));
+const STATUS_COLORS = {
+  online: "#44b700",
+  away: "#f59e0b",
+  busy: "#ef4444",
+};
 
 const ChatItem = ({
   name,
   message,
   time,
-  online,
+  status = "offline",
+  online, // kept for backwards compatibility
   selected,
   pinned,
   archived,
@@ -34,6 +32,8 @@ const ChatItem = ({
   onPinToggle,
   onArchiveToggle,
 }) => {
+  const effectiveStatus = status || (online ? "online" : "offline");
+  const dotColor = STATUS_COLORS[effectiveStatus] || null;
   const [contextMenu, setContextMenu] = useState(null);
 
   const handleContextMenu = (e) => {
@@ -75,18 +75,39 @@ const ChatItem = ({
           userSelect: "none",
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Stack direction="row" spacing={2} alignItems="center">
-            {online ? (
-              <StyledBadge
+            {dotColor ? (
+              <Badge
                 overlap="circular"
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                 variant="dot"
+                sx={{
+                  "& .MuiBadge-badge": {
+                    backgroundColor: dotColor,
+                    color: dotColor,
+                    boxShadow: (theme) =>
+                      `0 0 0 2px ${theme.palette.background.paper}`,
+                  },
+                }}
               >
-                <Avatar src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} />
-              </StyledBadge>
+                <Avatar
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`}
+                  sx={{ transition: "filter 0.2s" }}
+                />
+              </Badge>
             ) : (
-              <Avatar src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} />
+              <Avatar
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`}
+                sx={{
+                  filter: "grayscale(75%) opacity(0.7)",
+                  transition: "filter 0.2s",
+                }}
+              />
             )}
 
             <Stack spacing={0.3}>
@@ -95,7 +116,10 @@ const ChatItem = ({
               </Typography>
               <Typography
                 variant="caption"
-                sx={{ color: selected ? "rgba(255,255,255,0.75)" : "#6b7280", maxWidth: 140 }}
+                sx={{
+                  color: selected ? "rgba(255,255,255,0.75)" : "#6b7280",
+                  maxWidth: 140,
+                }}
                 noWrap
               >
                 {message}
@@ -106,7 +130,10 @@ const ChatItem = ({
           <Stack spacing={0.5} alignItems="center">
             <Typography
               variant="caption"
-              sx={{ color: selected ? "rgba(255,255,255,0.7)" : "#9ca3af", fontSize: "10px" }}
+              sx={{
+                color: selected ? "rgba(255,255,255,0.7)" : "#9ca3af",
+                fontSize: "10px",
+              }}
             >
               {time}
             </Typography>
@@ -152,7 +179,11 @@ const ChatItem = ({
       >
         <MenuItem onClick={handlePin} dense>
           <ListItemIcon>
-            <PushPin size={16} weight={pinned ? "fill" : "regular"} color="#5B96F7" />
+            <PushPin
+              size={16}
+              weight={pinned ? "fill" : "regular"}
+              color="#5B96F7"
+            />
           </ListItemIcon>
           <ListItemText
             primary={pinned ? "Unpin chat" : "Pin chat"}
