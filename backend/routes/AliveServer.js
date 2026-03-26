@@ -1,0 +1,15 @@
+const express = require('express');
+const db = require('../config/db');
+const router = express.Router();
+
+router.get('/ping',async (req,res)=>{
+    try{
+        await db.query('SELECT 1');
+        res.json({ status: 'ok', message: 'Server and DB alive', time: new Date().toISOString() });
+  } catch (err) {
+    console.error('Ping failed:', err.message);
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+})
+
+export default keepliveRouter = router;

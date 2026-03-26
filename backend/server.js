@@ -8,6 +8,7 @@ const authRoutes  = require("./routes/authRoutes");
 const userRoutes  = require("./routes/userRoutes");
 const roomRoutes  = require("./routes/roomRoutes");
 const setupSockets = require("./sockets/socketHandler");
+const keepliveRouter = require("./routes/AliveServer");
 
 const app = express();
 const server = http.createServer(app);
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/keepalive", keepliveRouter);
 
 // 🔹 Test DB Connection First
 sequelize.authenticate()
